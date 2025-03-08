@@ -143,7 +143,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     float endOri = -atan2(laserCloudIn.points[cloudSize - 1].y,
                           laserCloudIn.points[cloudSize - 1].x) +
                    2 * M_PI;
-
+    
     if (endOri - startOri > 3 * M_PI)
     {
         endOri -= 2 * M_PI;
@@ -237,7 +237,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
         }
 
         float relTime = (ori - startOri) / (endOri - startOri);
-        point.intensity = scanID + scanPeriod * relTime;
+        point.intensity = scanID + scanPeriod * relTime; //扫描ID + 扫描周期 * 相对时间
         laserCloudScans[scanID].push_back(point); 
     }
     
@@ -253,7 +253,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     }
 
     printf("prepare time %f \n", t_prepare.toc());
-
+    //计算曲率，与前后共10个点计算曲率
     for (int i = 5; i < cloudSize - 5; i++)
     { 
         float diffX = laserCloud->points[i - 5].x + laserCloud->points[i - 4].x + laserCloud->points[i - 3].x + laserCloud->points[i - 2].x + laserCloud->points[i - 1].x - 10 * laserCloud->points[i].x + laserCloud->points[i + 1].x + laserCloud->points[i + 2].x + laserCloud->points[i + 3].x + laserCloud->points[i + 4].x + laserCloud->points[i + 5].x;
@@ -269,10 +269,10 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 
     TicToc t_pts;
 
-    pcl::PointCloud<PointType> cornerPointsSharp;
-    pcl::PointCloud<PointType> cornerPointsLessSharp;
-    pcl::PointCloud<PointType> surfPointsFlat;
-    pcl::PointCloud<PointType> surfPointsLessFlat;
+    pcl::PointCloud<PointType> cornerPointsSharp;//边缘点
+    pcl::PointCloud<PointType> cornerPointsLessSharp;//次边缘点
+    pcl::PointCloud<PointType> surfPointsFlat;//平面点
+    pcl::PointCloud<PointType> surfPointsLessFlat;//次平面点
 
     float t_q_sort = 0;
     for (int i = 0; i < N_SCANS; i++)
@@ -288,7 +288,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
             TicToc t_tmp;
             std::sort (cloudSortInd + sp, cloudSortInd + ep + 1, comp);
             t_q_sort += t_tmp.toc();
-
+            //选2个边缘点，剩下的为次边缘点
             int largestPickedNum = 0;
             for (int k = ep; k >= sp; k--)
             {
@@ -316,7 +316,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
                     }
 
                     cloudNeighborPicked[ind] = 1; 
-
+                    //去除相邻点
                     for (int l = 1; l <= 5; l++)
                     {
                         float diffX = laserCloud->points[ind + l].x - laserCloud->points[ind + l - 1].x;
@@ -343,7 +343,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
                     }
                 }
             }
-
+            //选4个平面点
             int smallestPickedNum = 0;
             for (int k = sp; k <= ep; k++)
             {
@@ -361,7 +361,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
                     { 
                         break;
                     }
-
+                    //去除相邻点
                     cloudNeighborPicked[ind] = 1;
                     for (int l = 1; l <= 5; l++)
                     { 
@@ -389,7 +389,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
                     }
                 }
             }
-
+            //剩下的为次平面点
             for (int k = sp; k <= ep; k++)
             {
                 if (cloudLabel[k] <= 0)
@@ -398,7 +398,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
                 }
             }
         }
-
+        //次平面点下采样,划分体素网格，只取体素网格质心，减少点云数量
         pcl::PointCloud<PointType> surfPointsLessFlatScanDS;
         pcl::VoxelGrid<PointType> downSizeFilter;
         downSizeFilter.setInputCloud(surfPointsLessFlatScan);
