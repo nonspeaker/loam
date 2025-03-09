@@ -107,6 +107,7 @@ std::queue<sensor_msgs::PointCloud2ConstPtr> surfLessFlatBuf;
 std::queue<sensor_msgs::PointCloud2ConstPtr> fullPointsBuf;
 std::mutex mBuf;
 
+//去运动畸变
 // undistort lidar point
 void TransformToStart(PointType const *const pi, PointType *const po)
 {
@@ -129,7 +130,7 @@ void TransformToStart(PointType const *const pi, PointType *const po)
 }
 
 // transform all lidar points to the start of the next frame
-
+//将所以点云转换到下一帧的起始位置
 void TransformToEnd(PointType const *const pi, PointType *const po)
 {
     // undistort point first
@@ -298,7 +299,7 @@ int main(int argc, char **argv)
                     for (int i = 0; i < cornerPointsSharpNum; ++i)
                     {
                         TransformToStart(&(cornerPointsSharp->points[i]), &pointSel);
-                        kdtreeCornerLast->nearestKSearch(pointSel, 1, pointSearchInd, pointSearchSqDis);
+                        kdtreeCornerLast->nearestKSearch(pointSel, 1, pointSearchInd, pointSearchSqDis);//在上一帧的角点点云中找到最近的点
 
                         int closestPointInd = -1, minPointInd2 = -1;
                         if (pointSearchSqDis[0] < DISTANCE_SQ_THRESHOLD)
@@ -308,6 +309,7 @@ int main(int argc, char **argv)
 
                             double minPointSqDis2 = DISTANCE_SQ_THRESHOLD;
                             // search in the direction of increasing scan line
+                            //在上一帧角点点云相邻的scan中找到最据当前角点最近的点
                             for (int j = closestPointInd + 1; j < (int)laserCloudCornerLast->points.size(); ++j)
                             {
                                 // if in the same scan line, continue
